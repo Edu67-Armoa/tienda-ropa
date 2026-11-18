@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tienda de ropa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#EEF2F0;--card:#fff;--ink:#1B2623;--mut:#5C6B66;--pri:#0E6B5C;--soft:#D5E4DF;--line:#C4D2CD;--bad:#A3262A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Avenir Next","Trebuchet MS",Verdana,sans-serif;padding-bottom:84px}
+main{max-width:640px;margin:0 auto;padding:14px}
+section{display:none}section.on{display:block}
+h2{font-size:22px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+label{display:block;font-size:14px;color:var(--mut);margin:8px 0 3px}
+input,select,textarea,button{font:inherit;width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+button{background:var(--pri);color:#fff;border:0;font-weight:700;cursor:pointer}
+button.alt{background:var(--soft);color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,nav a:focus-visible{outline:3px solid #E0A800;outline-offset:2px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.item{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border:0}
+.item img,.ph{width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--soft);flex:none}
+.item .t{flex:1;min-width:0}.item .t small{color:var(--mut);display:block}
+.item input[type=checkbox]{width:22px;height:22px;flex:none}
+.item button{width:auto;padding:6px 12px}
+.total{font-size:34px;font-weight:800;color:var(--pri)}
+.k{display:flex;justify-content:space-between;padding:6px 0}.k b{font-size:20px}
+#reader{width:100%;border-radius:10px;overflow:hidden}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--ink);padding-bottom:env(safe-area-inset-bottom,0)}
+nav a{flex:1;text-align:center;color:#C9D6D1;padding:16px 4px;font-weight:700;text-decoration:none}
+nav a.on{color:#fff;box-shadow:inset 0 -4px 0 #E0A800}
+#toast{position:fixed;top:12px;left:12px;right:12px;max-width:600px;margin:auto;background:var(--ink);color:#fff;padding:12px;border-radius:10px;display:none;z-index:9}
+#toast.bad{background:var(--bad)}
+#print{display:none}
+@media print{body>*:not(#print){display:none!important}#print{display:flex!important;flex-wrap:wrap;gap:6px}
+.lbl{width:46mm;height:34mm;border:1px dashed #999;padding:2mm;display:flex;flex-direction:column;align-items:center;font:11px/1.2 sans-serif;page-break-inside:avoid}
+.lbl .q img,.lbl .q canvas{width:17mm!important;height:17mm!important}}
+</style>
+</head>
+<body>
+<div id="toast" role="status"></div>
+<main>
+<section id="caja" class="on">
+  <h2>Caja</h2>
+  <div class="card">
+    <button id="bScan">Escanear con la cámara</button>
+    <div id="cam" hidden><div id="reader"></div></div>
+    <label for="man">Código manual o lector de código de barras</label>
+    <input id="man" placeholder="RP-00001" autocomplete="off" autocapitalize="characters">
+  </div>
+  <div class="card"><div id="cart"></div></div>
+  <div class="card">
+    <div class="row">
+      <div><label for="dv">Descuento</label><input id="dv" type="number" min="0" inputmode="numeric" value="0"></div>
+      <div><label for="dt">Tipo</label><select id="dt"><option>%</option><option>Gs</option></select></div>
+      <div><label for="pay">Pago</label><select id="pay"><option>Efectivo</option><option>Transferencia</option></select></div>
+    </div>
+    <div class="k"><span>Subtotal</span><b id="sub">0 Gs</b></div>
+    <div class="k"><span>Descuento</span><b id="dsc">0 Gs</b></div>
+    <div class="k"><span>Total a cobrar</span><span class="total" id="tot">0 Gs</span></div>
+    <button id="bSale">Cobrar y registrar venta</button>
+  </div>
+</section>
+
+<section id="cargar">
+  <h2>Cargar prenda</h2>
+  <form id="f" class="card">
+    <label for="nombre">Nombre</label><input id="nombre" name="nombre" required placeholder="Campera de jean">
+    <div class="row"><div><label for="marca">Marca</label><input id="marca" name="marca" required></div>
+    <div><label for="talle">Talle</label><input id="talle" name="talle" required></div></div>
+    <div class="row"><div><label for="categoria">Categoría</label><select id="categoria" name="categoria"></select></div>
+    <div><label for="seccion">Sección</label><select id="seccion" name="seccion"><option>Mujer</option><option>Hombre</option><option>Niña</option><option>Niño</option><option>Unisex</option></select></div></div>
+    <div class="row"><div><label for="color">Color</label><input id="color" name="color"></div>
+    <div><label for="material">Material</label><input id="material" name="material"></div></div>
+    <div class="row"><div><label for="condicion">Condición</label><select id="condicion" name="condicion"><option>Usado</option><option>Nuevo</option></select></div>
+    <div><label for="estado">Estado (1 a 5)</label><select id="estado" name="estado"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div></div>
+    <label for="detalles">Detalles (manchas, fallas, medidas)</label><textarea id="detalles" name="detalles" rows="2"></textarea>
+    <div class="row"><div><label for="costo">Costo (Gs, opcional)</label><input id="costo" name="costo" type="number" min="0" inputmode="numeric"></div>
+    <div><label for="precio">Precio de venta (Gs)</label><input id="precio" name="precio" type="number" min="0" inputmode="numeric" required></div></div>
+    <label for="lote">Lote o viaje de origen</label><input id="lote" name="lote" placeholder="Viaje oct 2026">
+    <label for="foto">Foto</label><input id="foto" type="file" accept="image/*" capture="environment">
+    <br><button id="bAdd">Guardar prenda</button>
+  </form>
+</section>
+
+<section id="inv">
+  <h2>Inventario</h2>
+  <div class="card">
+    <input id="q" type="search" placeholder="Buscar por nombre, marca, talle o código">
+    <div class="row" style="margin-top:8px">
+      <select id="st"><option value="disponible">Disponibles</option><option value="vendido">Vendidas</option><option value="">Todas</option></select>
+      <button class="alt" id="bAll">Marcar todas</button>
+    </div>
+    <br><button id="bLbl">Imprimir etiquetas marcadas</button>
+  </div>
+  <div class="card" id="list"></div>
+</section>
+
+<section id="res">
+  <h2>Resumen</h2>
+  <div id="sum"></div>
+</section>
+</main>
+<div id="print"></div>
+<nav><a href="#caja" class="on">Caja</a><a href="#cargar">Cargar</a><a href="#inv">Inventario</a><a href="#res">Resumen</a></nav>
+
+<script>
+// 1) Pegá acá la URL de la implementación de Apps Script (termina en /exec)
+const API_URL = 'https://script.google.com/macros/s/AKfycbwkVCvJ9b427mZGfX722SU8c_hn0V3h2wArtP6KvGBh6Q8DDL1Nl9sU5NDCwrVGzsbx/exec';
+const CATS = ['Remeras','Camisas','Pantalones','Jeans','Vestidos','Polleras','Camperas','Buzos','Calzados','Accesorios','Ropa interior','Otros'];
+const $ = s => document.querySelector(s);
+const gs = n => Number(n || 0).toLocaleString('es-PY') + ' Gs';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let pin = '', P = [], V = [], cart = [], scanner = null, last = '', lastT = 0;
+try { pin = localStorage.getItem('pin') || ''; } catch (e) {}
+
+function toast(m, bad) {
+  const t = $('#toast'); t.textContent = m; t.className = bad ? 'bad' : ''; t.style.display = 'block';
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', 3500);
+}
+async function api(action, d = {}) {
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ pin, action, ...d }) });
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+async function load() {
+  try {
+    P = (await api('list')).productos; V = (await api('ventas')).ventas;
+    renderCart(); renderInv(); renderSum();
+  } catch (e) {
+    if (/PIN/.test(e.message)) { pin = prompt('PIN de acceso') || ''; try { localStorage.setItem('pin', pin); } catch (x) {} return load(); }
+    toast('No se pudo conectar: ' + e.message, true);
+  }
+}
+
+// Navegación
+function nav() {
+  const id = location.hash.slice(1) || 'caja';
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === id));
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('on', a.hash === '#' + id));
+}
+addEventListener('hashchange', nav); nav();
+$('#categoria').innerHTML = CATS.map(c => `<option>${c}</option>`).join('');
+
+// Caja
+function addCode(c) {
+  c = c.trim().toUpperCase(); if (!c) return;
+  const p = P.find(x => x.codigo === c);
+  if (!p) return toast('No existe el código ' + c, true);
+  if (p.status !== 'disponible') return toast(c + ' ya fue vendida', true);
+  if (cart.includes(c)) return toast(c + ' ya está en la lista', true);
+  cart.push(c); navigator.vibrate && navigator.vibrate(60); renderCart();
+}
+function calc() {
+  const sub = cart.reduce((a, c) => a + Number(P.find(x => x.codigo === c)?.precio || 0), 0);
+  const v = Math.max(0, Number($('#dv').value || 0));
+  const d = Math.min(sub, $('#dt').value === '%' ? Math.round(sub * v / 100) : v);
+  return { sub, d, tot: sub - d };
+}
+function renderCart() {
+  $('#cart').innerHTML = cart.length ? cart.map(c => {
+    const p = P.find(x => x.codigo === c);
+    return `<div class="item">${p.foto ? `<img src="${esc(p.foto)}" alt="">` : '<div class="ph"></div>'}
+    <div class="t"><b>${esc(p.nombre)}</b><small>${esc(p.marca)}, talle ${esc(p.talle)}, ${gs(p.precio)}</small></div>
+    <button class="alt" data-rm="${c}" aria-label="Quitar ${esc(p.nombre)}">Quitar</button></div>`;
+  }).join('') : '<p style="color:var(--mut);margin:0">Escaneá una etiqueta para agregar la primera prenda.</p>';
+  const { sub, d, tot } = calc();
+  $('#sub').textContent = gs(sub); $('#dsc').textContent = gs(d); $('#tot').textContent = gs(tot);
+}
+$('#cart').onclick = e => { const c = e.target.dataset.rm; if (c) { cart = cart.filter(x => x !== c); renderCart(); } };
+['dv', 'dt'].forEach(i => $('#' + i).oninput = renderCart);
+$('#man').onkeydown = e => { if (e.key === 'Enter') { addCode(e.target.value); e.target.value = ''; } };
+$('#bScan').onclick = async () => {
+  if (scanner) { await scanner.stop(); scanner = null; $('#cam').hidden = true; $('#bScan').textContent = 'Escanear con la cámara'; return; }
+  $('#cam').hidden = false; $('#bScan').textContent = 'Cerrar cámara';
+  scanner = new Html5Qrcode('reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, t => {
+    if (t !== last || Date.now() - lastT > 2500) { last = t; lastT = Date.now(); addCode(t); }
+  }).catch(() => { scanner = null; $('#cam').hidden = true; toast('No se pudo abrir la cámara. Revisá el permiso del navegador.', true); });
+};
+$('#bSale').onclick = async e => {
+  if (!cart.length) return toast('Agregá al menos una prenda', true);
+  e.target.disabled = true;
+  try {
+    const r = await api('sale', { items: cart, desc: { tipo: $('#dt').value, valor: $('#dv').value }, medio: $('#pay').value });
+    toast('Venta registrada: ' + gs(r.total)); cart = []; $('#dv').value = 0; await load();
+  } catch (x) { toast(x.message, true); }
+  e.target.disabled = false;
+};
+
+// Cargar prenda
+function shrink(file) {
+  return new Promise(res => {
+    const i = new Image();
+    i.onload = () => {
+      const k = Math.min(1, 900 / Math.max(i.width, i.height)), c = document.createElement('canvas');
+      c.width = i.width * k; c.height = i.height * k; c.getContext('2d').drawImage(i, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', .75).split(',')[1]);
+    };
+    i.src = URL.createObjectURL(file);
+  });
+}
+$('#f').onsubmit = async e => {
+  e.preventDefault(); const b = $('#bAdd'); b.disabled = true; b.textContent = 'Guardando...';
+  try {
+    const producto = Object.fromEntries(new FormData(e.target));
+    const file = $('#foto').files[0];
+    const r = await api('add', { producto, foto: file ? await shrink(file) : '' });
+    toast('Guardada con el código ' + r.producto.codigo);
+    const keep = { marca: $('#marca').value, categoria: $('#categoria').value, seccion: $('#seccion').value, lote: $('#lote').value };
+    e.target.reset(); Object.entries(keep).forEach(([k, v]) => $('#' + k).value = v);
+    await load();
+  } catch (x) { toast(x.message, true); }
+  b.disabled = false; b.textContent = 'Guardar prenda';
+};
+
+// Inventario y etiquetas
+function renderInv() {
+  const q = $('#q').value.toLowerCase(), st = $('#st').value;
+  const l = P.filter(p => (!st || p.status === st) && Object.values(p).join(' ').toLowerCase().includes(q)).reverse();
+  $('#list').innerHTML = l.length ? l.map(p => `<label class="item">
+    <input type="checkbox" value="${p.codigo}">
+    ${p.foto ? `<img src="${esc(p.foto)}" alt="" loading="lazy">` : '<div class="ph"></div>'}
+    <span class="t"><b>${esc(p.nombre)}</b><small>${esc(p.marca)}, talle ${esc(p.talle)}, ${esc(p.condicion)}</small>
+    <small>${p.codigo}, ${gs(p.precio)}</small></span></label>`).join('')
+    : '<p style="color:var(--mut);margin:0">No hay prendas con ese filtro. Cargá la primera en la pestaña Cargar.</p>';
+}
+['q', 'st'].forEach(i => $('#' + i).oninput = renderInv);
+$('#bAll').onclick = () => document.querySelectorAll('#list input').forEach(c => c.checked = true);
+$('#bLbl').onclick = () => {
+  const codes = [...document.querySelectorAll('#list input:checked')].map(c => c.value);
+  if (!codes.length) return toast('Marcá las prendas a etiquetar', true);
+  const box = $('#print'); box.innerHTML = '';
+  codes.forEach(c => {
+    const p = P.find(x => x.codigo === c), d = document.createElement('div'); d.className = 'lbl';
+    d.innerHTML = `<div class="q"></div><b>${c}</b><span>${esc(p.marca)}, talle ${esc(p.talle)}</span><strong>${gs(p.precio)}</strong>`;
+    box.append(d); new QRCode(d.querySelector('.q'), { text: c, width: 128, height: 128 });
+  });
+  setTimeout(() => print(), 500);
+};
+
+// Resumen
+function renderSum() {
+  const now = new Date(), pad = n => String(n).padStart(2, '0');
+  const day = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`, mon = day.slice(0, 7);
+  const agg = f => V.filter(v => String(v.fecha).startsWith(f)).reduce((a, v) => (a.n++, a.t += +v.total, a.c += +v.comision, a), { n: 0, t: 0, c: 0 });
+  const blk = (t, a) => `<div class="card"><b>${t}</b>
+    <div class="k"><span>Ventas</span><b>${a.n}</b></div>
+    <div class="k"><span>Total cobrado</span><b>${gs(a.t)}</b></div>
+    <div class="k"><span>Tu comisión (30%)</span><b style="color:var(--pri)">${gs(a.c)}</b></div>
+    <div class="k"><span>Para tu mamá</span><b>${gs(a.t - a.c)}</b></div></div>`;
+  const disp = P.filter(p => p.status === 'disponible');
+  $('#sum').innerHTML = blk('Hoy', agg(day)) + blk('Este mes', agg(mon)) +
+    `<div class="card"><b>Stock</b><div class="k"><span>Prendas disponibles</span><b>${disp.length}</b></div>
+    <div class="k"><span>Valor a precio de venta</span><b>${gs(disp.reduce((a, p) => a + +p.precio, 0))}</b></div></div>`;
+}
+
+if (API_URL.includes('PEGAR')) toast('Falta pegar la URL de Apps Script en index.html', true); else load();
+</script>
+</body>
+</html>
